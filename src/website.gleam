@@ -114,9 +114,18 @@ fn view_entries(
         ])
       }),
     )
+
+  let block_renderer: pandi_lustre.BlockRenderer(Msg) = fn(_, _, _) { None }
+  let inline_renderer: pandi_lustre.InlineRenderer(Msg) = fn(inline, _, _) {
+    case inline {
+      pd.Space -> Some(html.text("-----"))
+      _ -> None
+    }
+  }
   let post_view = case post {
     None -> html.text("")
-    Some(Ok(doc)) -> pandi_lustre.to_lustre(doc)
+    Some(Ok(doc)) ->
+      pandi_lustre.to_lustre_with(doc, block_renderer, inline_renderer)
     Some(Error(Nil)) -> html.text("Failed to fetch blog post.")
   }
   html.div([], [entry_list, post_view])

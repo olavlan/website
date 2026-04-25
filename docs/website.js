@@ -2205,6 +2205,9 @@ function class$(name) {
 function id(value) {
   return attribute2("id", value);
 }
+function title(text) {
+  return attribute2("title", text);
+}
 function href(url) {
   return attribute2("href", url);
 }
@@ -2468,6 +2471,9 @@ function text2(content) {
 function none2() {
   return text("", "");
 }
+function fragment2(children) {
+  return fragment("", children, empty2());
+}
 function memo2(dependencies, view) {
   return memo("", dependencies, view);
 }
@@ -2490,9 +2496,6 @@ function h1(attrs, children) {
 }
 function h2(attrs, children) {
   return element2("h2", attrs, children);
-}
-function h3(attrs, children) {
-  return element2("h3", attrs, children);
 }
 function h4(attrs, children) {
   return element2("h4", attrs, children);
@@ -2517,6 +2520,9 @@ function pre(attrs, children) {
 }
 function ul(attrs, children) {
   return element2("ul", attrs, children);
+}
+function a(attrs, children) {
+  return element2("a", attrs, children);
 }
 function code(attrs, children) {
   return element2("code", attrs, children);
@@ -3384,43 +3390,43 @@ class Config2 extends CustomType {
 var default_config = /* @__PURE__ */ new Config2(true, true, false, empty_list, empty_list, empty_list, false, /* @__PURE__ */ new None, /* @__PURE__ */ new None, /* @__PURE__ */ new None, /* @__PURE__ */ new None, /* @__PURE__ */ new None, /* @__PURE__ */ new None);
 
 // build/dev/javascript/lustre/lustre/internals/equals.ffi.mjs
-var isEqual2 = (a, b) => {
-  if (a === b) {
+var isEqual2 = (a2, b) => {
+  if (a2 === b) {
     return true;
   }
-  if (a == null || b == null) {
+  if (a2 == null || b == null) {
     return false;
   }
-  const type = typeof a;
+  const type = typeof a2;
   if (type !== typeof b) {
     return false;
   }
   if (type !== "object") {
     return false;
   }
-  const ctor = a.constructor;
+  const ctor = a2.constructor;
   if (ctor !== b.constructor) {
     return false;
   }
-  if (Array.isArray(a)) {
-    return areArraysEqual(a, b);
+  if (Array.isArray(a2)) {
+    return areArraysEqual(a2, b);
   }
-  return areObjectsEqual(a, b);
+  return areObjectsEqual(a2, b);
 };
-var areArraysEqual = (a, b) => {
-  let index4 = a.length;
+var areArraysEqual = (a2, b) => {
+  let index4 = a2.length;
   if (index4 !== b.length) {
     return false;
   }
   while (index4--) {
-    if (!isEqual2(a[index4], b[index4])) {
+    if (!isEqual2(a2[index4], b[index4])) {
       return false;
     }
   }
   return true;
 };
-var areObjectsEqual = (a, b) => {
-  const properties = Object.keys(a);
+var areObjectsEqual = (a2, b) => {
+  const properties = Object.keys(a2);
   let index4 = properties.length;
   if (Object.keys(b).length !== index4) {
     return false;
@@ -3430,7 +3436,7 @@ var areObjectsEqual = (a, b) => {
     if (!Object.hasOwn(b, property3)) {
       return false;
     }
-    if (!isEqual2(a[property3], b[property3])) {
+    if (!isEqual2(a2[property3], b[property3])) {
       return false;
     }
   }
@@ -4390,13 +4396,13 @@ var iterate = (list4, callback) => {
     }
   }
 };
-var append4 = (a, b) => {
-  if (!List$NonEmpty$rest(a)) {
+var append4 = (a2, b) => {
+  if (!List$NonEmpty$rest(a2)) {
     return b;
   } else if (!List$NonEmpty$rest(b)) {
-    return a;
+    return a2;
   } else {
-    return append(a, b);
+    return append(a2, b);
   }
 };
 
@@ -4529,10 +4535,10 @@ class Reconciler {
     }
   }
   #insert(parent, { children, before }) {
-    const fragment2 = createDocumentFragment();
+    const fragment3 = createDocumentFragment();
     const beforeEl = this.#getReference(parent, before);
-    this.#insertChildren(fragment2, null, parent, before | 0, children);
-    insertBefore(parent.parentNode, fragment2, beforeEl);
+    this.#insertChildren(fragment3, null, parent, before | 0, children);
+    insertBefore(parent.parentNode, fragment3, beforeEl);
   }
   #replace(parent, { index: index4, with: child2 }) {
     this.#removeChildren(parent, index4 | 0, 1);
@@ -4901,7 +4907,7 @@ function namespaced2(namespace, tag, attributes, children) {
   children$1 = $[1];
   return element("", namespace, tag, attributes, children$1, keyed_children, false, is_void_html_element(tag, namespace));
 }
-function fragment2(children) {
+function fragment3(children) {
   let $ = extract_keyed_children(children);
   let keyed_children;
   let children$1;
@@ -4990,7 +4996,7 @@ var virtualiseFragment = (metaParent, domParent, node, index4) => {
     }
   }
   meta2.endNode = node;
-  const vnode = fragment2(toList3(children));
+  const vnode = fragment3(toList3(children));
   return childResult(key, vnode, node?.nextSibling);
 };
 var virtualiseMap = (metaParent, domParent, node, index4) => {
@@ -5507,6 +5513,21 @@ class Span extends CustomType {
     this.content = content;
   }
 }
+class Link extends CustomType {
+  constructor(attributes, content, target) {
+    super();
+    this.attributes = attributes;
+    this.content = content;
+    this.target = target;
+  }
+}
+class Target extends CustomType {
+  constructor(url, title2) {
+    super();
+    this.url = url;
+    this.title = title2;
+  }
+}
 class Document extends CustomType {
   constructor(blocks, meta2) {
     super();
@@ -5516,6 +5537,13 @@ class Document extends CustomType {
 }
 
 // build/dev/javascript/pandi/pandi/decode.mjs
+function target_decoder() {
+  return field(0, string2, (url) => {
+    return field(1, string2, (title2) => {
+      return success(new Target(url, title2));
+    });
+  });
+}
 function decode_c_at(index4, decoder, next) {
   return field("c", at(toList([index4]), decoder), (value) => {
     return next(value);
@@ -5545,6 +5573,15 @@ function str_decoder() {
     return success(new Str(content));
   });
 }
+function link_decoder() {
+  return decode_c_at(0, attributes_decoder(), (attributes) => {
+    return decode_c_at(1, list2(recursive(inline_decoder)), (content) => {
+      return decode_c_at(2, target_decoder(), (target) => {
+        return success(new Link(attributes, content, target));
+      });
+    });
+  });
+}
 function span_decoder() {
   return decode_c_at(0, attributes_decoder(), (attributes) => {
     return decode_c_at(1, list2(recursive(inline_decoder)), (content) => {
@@ -5560,6 +5597,8 @@ function inline_decoder() {
       return space_decoder();
     } else if (t === "Span") {
       return span_decoder();
+    } else if (t === "Link") {
+      return link_decoder();
     } else {
       return failure(new Space, "Inline");
     }
@@ -5684,87 +5723,44 @@ function attributes_to_lustre(attrs) {
   });
   return flatten(toList([id2, classes, keyvalues]));
 }
-function inline_to_lustre(inline) {
-  if (inline instanceof Str) {
-    let content = inline.content;
-    return text3(content);
-  } else if (inline instanceof Space) {
-    return text3(" ");
-  } else {
-    let attrs = inline.attributes;
-    let content = inline.content;
-    let inlines = map2(content, inline_to_lustre);
-    let attributes = attributes_to_lustre(attrs);
-    return span(attributes, inlines);
-  }
-}
-function header_to_lustre(level, attrs, content) {
-  if (level === 1) {
-    return h1(attrs, content);
-  } else if (level === 2) {
-    return h2(attrs, content);
-  } else if (level === 3) {
-    return h3(attrs, content);
-  } else if (level === 4) {
-    return h4(attrs, content);
-  } else if (level === 5) {
-    return h5(attrs, content);
-  } else {
-    return h6(attrs, content);
-  }
-}
-function block_to_lustre(block) {
-  if (block instanceof Header) {
-    let level = block.level;
-    let attrs = block.attributes;
-    let content = block.content;
-    let inlines = map2(content, inline_to_lustre);
-    let attributes = attributes_to_lustre(attrs);
-    return header_to_lustre(level, attributes, inlines);
-  } else if (block instanceof Para) {
-    let content = block.content;
-    let inlines = map2(content, inline_to_lustre);
-    return p(toList([]), inlines);
-  } else if (block instanceof Plain) {
-    let content = block.content;
-    let inlines = map2(content, inline_to_lustre);
-    return span(toList([]), inlines);
-  } else if (block instanceof CodeBlock) {
-    let attrs = block.attributes;
-    let text4 = block.text;
-    let attributes = attributes_to_lustre(attrs);
-    return pre(attributes, toList([code(toList([]), toList([text3(text4)]))]));
-  } else if (block instanceof Div) {
-    let attrs = block.attributes;
-    let content = block.content;
-    let blocks = map2(content, block_to_lustre);
-    let attributes = attributes_to_lustre(attrs);
-    return div(attributes, blocks);
-  } else {
-    let items = block.items;
-    let list_items = map2(items, (item) => {
-      let blocks = map2(item, block_to_lustre);
-      return li(toList([]), blocks);
-    });
-    return ul(toList([]), list_items);
-  }
-}
 function inline_to_lustre_with(inline, inline_renderer, meta2) {
   let $ = inline_renderer(inline, meta2);
   if ($ instanceof Some) {
     let el = $[0];
     return el;
   } else {
-    if (inline instanceof Span) {
+    if (inline instanceof Str) {
+      let content = inline.content;
+      return text3(content);
+    } else if (inline instanceof Space) {
+      return text3(" ");
+    } else if (inline instanceof Span) {
       let attrs = inline.attributes;
       let content = inline.content;
-      let inlines = map2(content, (i) => {
-        return inline_to_lustre_with(i, inline_renderer, meta2);
+      let inlines = map2(content, (_capture) => {
+        return inline_to_lustre_with(_capture, inline_renderer, meta2);
       });
       let attributes = attributes_to_lustre(attrs);
       return span(attributes, inlines);
     } else {
-      return inline_to_lustre(inline);
+      let attrs = inline.attributes;
+      let content = inline.content;
+      let target = inline.target;
+      let inlines = map2(content, (_capture) => {
+        return inline_to_lustre_with(_capture, inline_renderer, meta2);
+      });
+      let attributes = attributes_to_lustre(attrs);
+      let href2 = href(target.url);
+      let _block;
+      let $1 = target.title;
+      if ($1 === "") {
+        _block = toList([]);
+      } else {
+        let title3 = $1;
+        _block = toList([title(title3)]);
+      }
+      let title2 = _block;
+      return a(flatten(toList([attributes, toList([href2]), title2])), inlines);
     }
   }
 }
@@ -5778,55 +5774,68 @@ function block_to_lustre_with(block, block_renderer, inline_renderer, meta2) {
       let level = block.level;
       let attrs = block.attributes;
       let content = block.content;
-      let inlines = map2(content, (i) => {
-        return inline_to_lustre_with(i, inline_renderer, meta2);
+      let inlines = map2(content, (_capture) => {
+        return inline_to_lustre_with(_capture, inline_renderer, meta2);
       });
-      let attributes = attributes_to_lustre(attrs);
-      return header_to_lustre(level, attributes, inlines);
+      let attrs$1 = attributes_to_lustre(attrs);
+      if (level === 1) {
+        return h1(attrs$1, inlines);
+      } else if (level === 2) {
+        return h2(attrs$1, inlines);
+      } else if (level === 4) {
+        return h4(attrs$1, inlines);
+      } else if (level === 5) {
+        return h5(attrs$1, inlines);
+      } else {
+        return h6(attrs$1, inlines);
+      }
     } else if (block instanceof Para) {
       let content = block.content;
-      let inlines = map2(content, (i) => {
-        return inline_to_lustre_with(i, inline_renderer, meta2);
+      let inlines = map2(content, (_capture) => {
+        return inline_to_lustre_with(_capture, inline_renderer, meta2);
       });
       return p(toList([]), inlines);
     } else if (block instanceof Plain) {
       let content = block.content;
-      let inlines = map2(content, (i) => {
-        return inline_to_lustre_with(i, inline_renderer, meta2);
+      let inlines = map2(content, (_capture) => {
+        return inline_to_lustre_with(_capture, inline_renderer, meta2);
       });
       return span(toList([]), inlines);
+    } else if (block instanceof CodeBlock) {
+      let attrs = block.attributes;
+      let text4 = block.text;
+      let attributes = attributes_to_lustre(attrs);
+      return pre(attributes, toList([code(toList([]), toList([text3(text4)]))]));
     } else if (block instanceof Div) {
       let attrs = block.attributes;
       let content = block.content;
-      let blocks = map2(content, (b) => {
-        return block_to_lustre_with(b, block_renderer, inline_renderer, meta2);
+      let blocks = map2(content, (_capture) => {
+        return block_to_lustre_with(_capture, block_renderer, inline_renderer, meta2);
       });
       let attributes = attributes_to_lustre(attrs);
       return div(attributes, blocks);
-    } else if (block instanceof BulletList) {
+    } else {
       let items = block.items;
       let list_items = map2(items, (item) => {
-        let blocks = map2(item, (b) => {
-          return block_to_lustre_with(b, block_renderer, inline_renderer, meta2);
+        let blocks = map2(item, (_capture) => {
+          return block_to_lustre_with(_capture, block_renderer, inline_renderer, meta2);
         });
         return li(toList([]), blocks);
       });
       return ul(toList([]), list_items);
-    } else {
-      return block_to_lustre(block);
     }
   }
 }
 function to_lustre_with(document, block_renderer, inline_renderer) {
-  let elements = map2(document.blocks, (b) => {
-    return block_to_lustre_with(b, block_renderer, inline_renderer, document.meta);
+  let elements = map2(document.blocks, (_capture) => {
+    return block_to_lustre_with(_capture, block_renderer, inline_renderer, document.meta);
   });
-  return div(toList([]), elements);
+  return fragment2(elements);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/uri.mjs
 class Uri extends CustomType {
-  constructor(scheme, userinfo, host, port, path, query, fragment3) {
+  constructor(scheme, userinfo, host, port, path, query, fragment4) {
     super();
     this.scheme = scheme;
     this.userinfo = userinfo;
@@ -5834,7 +5843,7 @@ class Uri extends CustomType {
     this.port = port;
     this.path = path;
     this.query = query;
-    this.fragment = fragment3;
+    this.fragment = fragment4;
   }
 }
 var empty3 = /* @__PURE__ */ new Uri(/* @__PURE__ */ new None, /* @__PURE__ */ new None, /* @__PURE__ */ new None, /* @__PURE__ */ new None, "", /* @__PURE__ */ new None, /* @__PURE__ */ new None);
@@ -6279,8 +6288,8 @@ function to_string5(uri) {
   let _block;
   let $ = uri.fragment;
   if ($ instanceof Some) {
-    let fragment3 = $[0];
-    _block = toList(["#", fragment3]);
+    let fragment4 = $[0];
+    _block = toList(["#", fragment4]);
   } else {
     _block = toList([]);
   }
@@ -6497,17 +6506,17 @@ function map_promise(promise, fn) {
 // build/dev/javascript/gleam_javascript/gleam/javascript/promise.mjs
 function tap(promise, callback) {
   let _pipe = promise;
-  return map_promise(_pipe, (a) => {
-    callback(a);
-    return a;
+  return map_promise(_pipe, (a2) => {
+    callback(a2);
+    return a2;
   });
 }
 function try_await(promise, callback) {
   let _pipe = promise;
   return then_await(_pipe, (result) => {
     if (result instanceof Ok) {
-      let a = result[0];
-      return callback(a);
+      let a2 = result[0];
+      return callback(a2);
     } else {
       let e = result[0];
       return resolve(new Error(e));
@@ -6731,9 +6740,9 @@ function get3(url, handler) {
 var FILEPATH = "src/website.gleam";
 
 class BlogEntry extends CustomType {
-  constructor(title, url, date_created) {
+  constructor(title2, url, date_created) {
     super();
-    this.title = title;
+    this.title = title2;
     this.url = url;
     this.date_created = date_created;
   }
@@ -6840,10 +6849,10 @@ function fetch_blog_post(url) {
   }));
 }
 function entry_decoder() {
-  return field("title", string2, (title) => {
+  return field("title", string2, (title2) => {
     return field("url", string2, (url) => {
       return field("date_created", string2, (date_created) => {
-        return success(new BlogEntry(title, url, date_created));
+        return success(new BlogEntry(title2, url, date_created));
       });
     });
   });

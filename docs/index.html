@@ -4,6 +4,16 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1" name="viewport">
 
+    <script>
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var path = params.get('path');
+        if (path) {
+          window.history.replaceState(null, null, path);
+        }
+      })();
+    </script>
+
     <title>
       website
     </title>

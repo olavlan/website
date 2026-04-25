@@ -3,6 +3,7 @@ import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import lustre
+import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
@@ -115,10 +116,16 @@ fn view_entries(
       }),
     )
 
-  let block_renderer: pandi_lustre.BlockRenderer(Msg) = fn(_, _, _) { None }
-  let inline_renderer: pandi_lustre.InlineRenderer(Msg) = fn(inline, _, _) {
+  let block_renderer: pandi_lustre.BlockRenderer(Msg) = fn(block, _) {
+    case block {
+      pd.Para([pd.Str("http" <> rest)]) ->
+        Some(html.link([attribute.href(rest)]))
+      _ -> None
+    }
+  }
+  let inline_renderer: pandi_lustre.InlineRenderer(Msg) = fn(inline, _) {
     case inline {
-      pd.Space -> Some(html.text("-----"))
+      pd.Space -> Some(html.text("-"))
       _ -> None
     }
   }

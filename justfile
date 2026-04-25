@@ -3,11 +3,11 @@ default:
 
 # build the website
 build:
-  gleam run -m lustre/dev build
+  gleam run -m lustre/dev build --no-html --outdir=docs
 
 # build the website with html; run this the first time you build the website
 build-with-html:
-  gleam run -m lustre/dev build --no-html=false
+  gleam run -m lustre/dev build --outdir=docs
 
 # serve the web page locally (for development)
 serve:

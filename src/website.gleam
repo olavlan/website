@@ -1,12 +1,8 @@
-// IMPORTS ---------------------------------------------------------------------
-
 import gleam/dict.{type Dict}
 import gleam/dynamic/decode
-import gleam/int
 import gleam/json
 import gleam/list
-import gleam/option.{type Option, None, Some}
-import gleam/result
+import gleam/string
 import gleam/uri.{type Uri}
 import lustre
 import lustre/attribute.{type Attribute}
@@ -19,8 +15,6 @@ import pandi/lustre as pandi_lustre
 import pandi/pandoc as pd
 import rsvp
 
-// MAIN ------------------------------------------------------------------------
-
 pub fn main() {
   let app = lustre.application(init, update, view)
   let assert Ok(_) = lustre.start(app, "#app", Nil)
@@ -28,10 +22,8 @@ pub fn main() {
   Nil
 }
 
-// MODEL -----------------------------------------------------------------------
-
 type Model {
-  Model(posts: Option(Result(Dict(Int, BlogPost), Nil)), route: Route)
+  Model(posts: Result(Dict(String, BlogPost), Nil), route: Route)
 }
 
 type BlogPost {
@@ -41,7 +33,7 @@ type BlogPost {
 type Route {
   Index
   Posts
-  PostById(id: Int)
+  PostById(id: String)
   About
   NotFound(uri: Uri)
 }
@@ -52,11 +44,7 @@ fn parse_route(uri: Uri) -> Route {
 
     ["posts"] -> Posts
 
-    ["post", post_id] ->
-      case int.parse(post_id) {
-        Ok(post_id) -> PostById(id: post_id)
-        Error(_) -> NotFound(uri:)
-      }
+    ["post", post_id] -> PostById(id: post_id)
 
     ["about"] -> About
 
@@ -69,7 +57,7 @@ fn href(route: Route) -> Attribute(message) {
     Index -> "/"
     About -> "/about"
     Posts -> "/posts"
-    PostById(post_id) -> "/post/" <> int.to_string(post_id)
+    PostById(post_id) -> "/post/" <> post_id
     NotFound(_) -> "/404"
   }
 
@@ -89,16 +77,11 @@ fn init(_) -> #(Model, Effect(Message)) {
       |> UserNavigatedTo
     })
 
-  let effects = case route {
-    Posts -> effect.batch([modem_effect, fetch_blog()])
-    PostById(_) -> effect.batch([modem_effect, fetch_blog()])
-    _ -> modem_effect
-  }
-
-  #(Model(posts: None, route:), effects)
+  #(
+    Model(posts: Error(Nil), route:),
+    effect.batch([modem_effect, fetch_blog()]),
+  )
 }
-
-// UPDATE ----------------------------------------------------------------------
 
 type Message {
   UserNavigatedTo(route: Route)
@@ -107,36 +90,21 @@ type Message {
 
 fn update(model: Model, message: Message) -> #(Model, Effect(Message)) {
   case message {
-    UserNavigatedTo(route:) -> {
-      let effect = case route, model.posts {
-        Posts, None -> fetch_blog()
-        PostById(_), None -> fetch_blog()
-        _, _ -> effect.none()
-      }
-      #(Model(..model, route:), effect)
-    }
+    UserNavigatedTo(route:) -> #(Model(..model, route:), effect.none())
 
     BlogFetched(Ok(body)) -> {
       let decoded =
         body
         |> json.parse(blog_posts_decoder())
-        |> result.map(fn(posts) {
-          posts
-          |> list.index_map(fn(post, index) { #(index, post) })
-          |> dict.from_list
-        })
       case decoded {
         Ok(posts_dict) -> #(
-          Model(..model, posts: Some(Ok(posts_dict))),
+          Model(..model, posts: Ok(posts_dict)),
           effect.none(),
         )
-        Error(_) -> #(Model(..model, posts: Some(Error(Nil))), effect.none())
+        Error(_) -> #(Model(..model, posts: Error(Nil)), effect.none())
       }
     }
-    BlogFetched(Error(_)) -> #(
-      Model(..model, posts: Some(Error(Nil))),
-      effect.none(),
-    )
+    BlogFetched(Error(_)) -> #(Model(..model, posts: Error(Nil)), effect.none())
   }
 }
 
@@ -146,10 +114,11 @@ fn fetch_blog() -> Effect(Message) {
 
 const blog_url = "https://raw.githubusercontent.com/olavlan/blog/master/blog.json"
 
-// DECODERS --------------------------------------------------------------------
-
-fn blog_posts_decoder() -> decode.Decoder(List(BlogPost)) {
-  use posts <- decode.field("posts", decode.list(blog_post_decoder()))
+fn blog_posts_decoder() -> decode.Decoder(Dict(String, BlogPost)) {
+  use posts <- decode.field(
+    "posts",
+    decode.dict(decode.string, blog_post_decoder()),
+  )
   decode.success(posts)
 }
 
@@ -159,8 +128,6 @@ fn blog_post_decoder() -> decode.Decoder(BlogPost) {
   use document <- decode.field("pandoc", pandi_decode.document_decoder())
   decode.success(BlogPost(title:, date_created:, document:))
 }
-
-// VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Message) {
   html.div([attribute.class("mx-auto max-w-2xl px-32")], [
@@ -206,8 +173,6 @@ fn view_header_link(
   )
 }
 
-// VIEW PAGES ------------------------------------------------------------------
-
 fn view_index() -> List(Element(message)) {
   [
     title("Hello, Joe"),
@@ -225,22 +190,18 @@ fn view_index() -> List(Element(message)) {
 
 fn view_posts(model: Model) -> List(Element(Message)) {
   case model.posts {
-    None -> [title("Posts"), leading("Loading...")]
-    Some(Error(Nil)) -> [title("Posts"), leading("Failed to fetch posts.")]
-    Some(Ok(posts)) -> {
+    Ok(posts) -> {
       let entries =
         posts
         |> dict.to_list
-        |> list.sort(fn(a, b) { int.compare(a.0, b.0) })
+        |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
         |> list.map(fn(entry) {
-          let index = entry.0
-          let post = entry.1
+          let #(id, post) = entry
           html.article([attribute.class("mt-14")], [
             html.h3([attribute.class("text-xl text-purple-600 font-light")], [
-              html.a(
-                [attribute.class("hover:underline"), href(PostById(index))],
-                [html.text(post.title)],
-              ),
+              html.a([attribute.class("hover:underline"), href(PostById(id))], [
+                html.text(post.title),
+              ]),
             ]),
             html.p([attribute.class("mt-1")], [
               html.text(post.date_created),
@@ -250,14 +211,13 @@ fn view_posts(model: Model) -> List(Element(Message)) {
 
       [title("Posts"), ..entries]
     }
+    Error(Nil) -> [title("Posts"), leading("Loading...")]
   }
 }
 
-fn view_post(model: Model, post_id: Int) -> List(Element(Message)) {
+fn view_post(model: Model, post_id: String) -> List(Element(Message)) {
   case model.posts {
-    None -> [title("Loading...")]
-    Some(Error(Nil)) -> [title("Failed to fetch posts.")]
-    Some(Ok(posts)) ->
+    Ok(posts) ->
       case dict.get(posts, post_id) {
         Error(_) -> view_not_found()
         Ok(post) -> [
@@ -267,6 +227,7 @@ fn view_post(model: Model, post_id: Int) -> List(Element(Message)) {
           html.p([attribute.class("mt-14")], [link(Posts, "<- Go back?")]),
         ]
       }
+    Error(Nil) -> [title("Loading...")]
   }
 }
 
@@ -293,8 +254,6 @@ fn view_not_found() -> List(Element(message)) {
     ),
   ]
 }
-
-// VIEW HELPERS ----------------------------------------------------------------
 
 fn title(title: String) -> Element(message) {
   html.h2([attribute.class("text-3xl text-purple-800 font-light")], [

@@ -650,24 +650,6 @@ function to_list(dict) {
     return prepend([key, value], acc);
   });
 }
-function from_list_loop(loop$transient, loop$list) {
-  while (true) {
-    let transient = loop$transient;
-    let list = loop$list;
-    if (list instanceof Empty) {
-      return fromTransient(transient);
-    } else {
-      let rest = list.tail;
-      let key = list.head[0];
-      let value = list.head[1];
-      loop$transient = destructiveTransientInsert(key, value, transient);
-      loop$list = rest;
-    }
-  }
-}
-function from_list(list) {
-  return from_list_loop(toTransient(make()), list);
-}
 function keys(dict) {
   return fold(dict, toList([]), (acc, key, _) => {
     return prepend(key, acc);
@@ -715,28 +697,6 @@ function map_loop(loop$list, loop$fun, loop$acc) {
 }
 function map2(list, fun) {
   return map_loop(list, fun, toList([]));
-}
-function index_map_loop(loop$list, loop$fun, loop$index, loop$acc) {
-  while (true) {
-    let list = loop$list;
-    let fun = loop$fun;
-    let index2 = loop$index;
-    let acc = loop$acc;
-    if (list instanceof Empty) {
-      return reverse(acc);
-    } else {
-      let first$1 = list.head;
-      let rest$1 = list.tail;
-      let acc$1 = prepend(fun(first$1, index2), acc);
-      loop$list = rest$1;
-      loop$fun = fun;
-      loop$index = index2 + 1;
-      loop$acc = acc$1;
-    }
-  }
-}
-function index_map(list, fun) {
-  return index_map_loop(list, fun, 0, toList([]));
 }
 function append_loop(loop$first, loop$second) {
   while (true) {
@@ -1439,16 +1399,8 @@ function recursive(inner) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam_stdlib.mjs
-var Nil = undefined;
 function identity(x) {
   return x;
-}
-function parse_int(value) {
-  if (/^[-+]?(\d+)$/.test(value)) {
-    return Result$Ok(parseInt(value));
-  } else {
-    return Result$Error(Nil);
-  }
 }
 function to_string(term) {
   return term.toString();
@@ -1473,6 +1425,9 @@ function pop_codeunit(str) {
 }
 function lowercase(string3) {
   return string3.toLowerCase();
+}
+function less_than(a, b) {
+  return a < b;
 }
 function split(xs, pattern) {
   return arrayToList(xs.split(pattern));
@@ -1808,13 +1763,13 @@ function isResult(data2) {
   return Result$isOk(data2) || Result$isError(data2);
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/int.mjs
+// build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function compare2(a, b) {
   let $ = a === b;
   if ($) {
     return new Eq;
   } else {
-    let $1 = a < b;
+    let $1 = less_than(a, b);
     if ($1) {
       return new Lt;
     } else {
@@ -1822,8 +1777,6 @@ function compare2(a, b) {
     }
   }
 }
-
-// build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function split2(x, substring) {
   if (substring === "") {
     return graphemes(x);
@@ -6986,6 +6939,7 @@ class BlogFetched extends CustomType {
     this[0] = $0;
   }
 }
+var base_path = "/website";
 var blog_url = "https://raw.githubusercontent.com/olavlan/blog/master/blog.json";
 function paragraph(text4) {
   return p(toList([class$("mt-14")]), toList([text3(text4)]));
@@ -7012,16 +6966,16 @@ function view_about() {
 function href2(route) {
   let _block;
   if (route instanceof Index2) {
-    _block = "/";
+    _block = base_path + "/";
   } else if (route instanceof Posts) {
-    _block = "/posts";
+    _block = base_path + "/posts";
   } else if (route instanceof PostById) {
     let post_id = route.id;
-    _block = "/post/" + to_string(post_id);
+    _block = base_path + "/posts/" + post_id;
   } else if (route instanceof About) {
-    _block = "/about";
+    _block = base_path + "/about";
   } else {
-    _block = "/404";
+    _block = base_path + "/404";
   }
   let url = _block;
   return href(url);
@@ -7032,66 +6986,54 @@ function link(target, title3) {
     class$("text-purple-600 hover:underline cursor-pointer")
   ]), toList([text3(title3)]));
 }
-function leading(text4) {
-  return p(toList([class$("mt-8 text-lg")]), toList([text3(text4)]));
-}
 function view_post(model, post_id) {
   let $ = model.posts;
-  if ($ instanceof Some) {
-    let $1 = $[0];
+  if ($ instanceof Ok) {
+    let posts = $[0];
+    let $1 = get(posts, post_id);
     if ($1 instanceof Ok) {
-      let posts = $1[0];
-      let $2 = get(posts, post_id);
-      if ($2 instanceof Ok) {
-        let post = $2[0];
-        return toList([
-          article(toList([]), toList([
-            title2(post.title),
-            leading(post.date_created),
-            to_lustre(post.document)
-          ])),
-          p(toList([class$("mt-14")]), toList([link(new Posts, "<- Go back?")]))
-        ]);
-      } else {
-        return view_not_found();
-      }
+      let post = $1[0];
+      return toList([
+        article(toList([]), toList([to_lustre(post.document)])),
+        p(toList([class$("mt-14")]), toList([link(new Posts, "<- Go back?")]))
+      ]);
     } else {
-      return toList([title2("Failed to fetch posts.")]);
+      return view_not_found();
     }
   } else {
     return toList([title2("Loading...")]);
   }
 }
+function leading(text4) {
+  return p(toList([class$("mt-8 text-lg")]), toList([text3(text4)]));
+}
 function view_posts(model) {
   let $ = model.posts;
-  if ($ instanceof Some) {
-    let $1 = $[0];
-    if ($1 instanceof Ok) {
-      let posts = $1[0];
-      let _block;
-      let _pipe = posts;
-      let _pipe$1 = to_list(_pipe);
-      let _pipe$2 = sort(_pipe$1, (a2, b) => {
-        return compare2(a2[0], b[0]);
-      });
-      _block = map2(_pipe$2, (entry) => {
-        let index5 = entry[0];
-        let post = entry[1];
-        return article(toList([class$("mt-14")]), toList([
-          h3(toList([class$("text-xl text-purple-600 font-light")]), toList([
-            a(toList([
-              class$("hover:underline"),
-              href2(new PostById(index5))
-            ]), toList([text3(post.title)]))
-          ])),
-          p(toList([class$("mt-1")]), toList([text3(post.date_created)]))
-        ]));
-      });
-      let entries = _block;
-      return prepend(title2("Posts"), entries);
-    } else {
-      return toList([title2("Posts"), leading("Failed to fetch posts.")]);
-    }
+  if ($ instanceof Ok) {
+    let posts = $[0];
+    let _block;
+    let _pipe = posts;
+    let _pipe$1 = to_list(_pipe);
+    let _pipe$2 = sort(_pipe$1, (a2, b) => {
+      return compare2(a2[0], b[0]);
+    });
+    _block = map2(_pipe$2, (entry) => {
+      let id2;
+      let post;
+      id2 = entry[0];
+      post = entry[1];
+      return article(toList([class$("mt-14")]), toList([
+        h3(toList([class$("text-xl text-purple-600 font-light")]), toList([
+          a(toList([
+            class$("hover:underline"),
+            href2(new PostById(id2))
+          ]), toList([text3(post.title)]))
+        ])),
+        p(toList([class$("mt-1")]), toList([text3(post.date_created)]))
+      ]));
+    });
+    let entries = _block;
+    return prepend(title2("Posts"), entries);
   } else {
     return toList([title2("Posts"), leading("Loading...")]);
   }
@@ -7161,98 +7103,75 @@ function blog_post_decoder() {
   });
 }
 function blog_posts_decoder() {
-  return field("posts", list2(blog_post_decoder()), (posts) => {
+  return field("posts", dict2(string2, blog_post_decoder()), (posts) => {
     return success(posts);
   });
-}
-function fetch_blog() {
-  return get3(blog_url, expect_text((var0) => {
-    return new BlogFetched(var0);
-  }));
 }
 function update2(model, message2) {
   if (message2 instanceof UserNavigatedTo) {
     let route = message2.route;
-    let _block;
-    let $ = model.posts;
-    if ($ instanceof None) {
-      if (route instanceof Posts) {
-        _block = fetch_blog();
-      } else if (route instanceof PostById) {
-        _block = fetch_blog();
-      } else {
-        _block = none();
-      }
-    } else {
-      _block = none();
-    }
-    let effect = _block;
-    return [new Model(model.posts, route), effect];
+    return [new Model(model.posts, route), none()];
   } else {
     let $ = message2[0];
     if ($ instanceof Ok) {
       let body = $[0];
       let _block;
       let _pipe = body;
-      let _pipe$1 = parse(_pipe, blog_posts_decoder());
-      _block = map4(_pipe$1, (posts) => {
-        let _pipe$2 = posts;
-        let _pipe$3 = index_map(_pipe$2, (post, index5) => {
-          return [index5, post];
-        });
-        return from_list(_pipe$3);
-      });
+      _block = parse(_pipe, blog_posts_decoder());
       let decoded = _block;
       if (decoded instanceof Ok) {
         let posts_dict = decoded[0];
-        return [
-          new Model(new Some(new Ok(posts_dict)), model.route),
-          none()
-        ];
+        return [new Model(new Ok(posts_dict), model.route), none()];
       } else {
-        return [
-          new Model(new Some(new Error(undefined)), model.route),
-          none()
-        ];
+        return [new Model(new Error(undefined), model.route), none()];
       }
     } else {
-      return [
-        new Model(new Some(new Error(undefined)), model.route),
-        none()
-      ];
+      return [new Model(new Error(undefined), model.route), none()];
     }
   }
 }
+function fetch_blog() {
+  return get3(blog_url, expect_text((var0) => {
+    return new BlogFetched(var0);
+  }));
+}
 function parse_route(uri) {
-  let $ = path_segments(uri.path);
-  if ($ instanceof Empty) {
+  let segments = path_segments(uri.path);
+  let _block;
+  if (segments instanceof Empty) {
+    _block = segments;
+  } else {
+    let $ = segments.head;
+    if ($ === "website") {
+      let rest = segments.tail;
+      _block = rest;
+    } else {
+      _block = segments;
+    }
+  }
+  let path = _block;
+  if (path instanceof Empty) {
     return new Index2;
   } else {
-    let $1 = $.tail;
-    if ($1 instanceof Empty) {
-      let $2 = $.head;
-      if ($2 === "") {
+    let $ = path.tail;
+    if ($ instanceof Empty) {
+      let $1 = path.head;
+      if ($1 === "") {
         return new Index2;
-      } else if ($2 === "posts") {
+      } else if ($1 === "posts") {
         return new Posts;
-      } else if ($2 === "about") {
+      } else if ($1 === "about") {
         return new About;
       } else {
         return new NotFound(uri);
       }
     } else {
-      let $2 = $1.tail;
-      if ($2 instanceof Empty) {
-        let $3 = $.head;
-        if ($3 === "post") {
-          let post_id = $1.head;
-          let $4 = parse_int(post_id);
-          if ($4 instanceof Ok) {
-            let post_id$1 = $4[0];
-            return new PostById(post_id$1);
-          } else {
-            return new NotFound(uri);
-          }
+      let $1 = $.tail;
+      if ($1 instanceof Empty) {
+        let $2 = path.head;
+        if ($2 === "posts") {
+          let post_id = $.head;
+          return new PostById(post_id);
         } else {
           return new NotFound(uri);
         }
@@ -7277,22 +7196,16 @@ function init2(_) {
     let _pipe$1 = parse_route(_pipe);
     return new UserNavigatedTo(_pipe$1);
   });
-  let _block$1;
-  if (route instanceof Posts) {
-    _block$1 = batch(toList([modem_effect, fetch_blog()]));
-  } else if (route instanceof PostById) {
-    _block$1 = batch(toList([modem_effect, fetch_blog()]));
-  } else {
-    _block$1 = modem_effect;
-  }
-  let effects = _block$1;
-  return [new Model(new None, route), effects];
+  return [
+    new Model(new Error(undefined), route),
+    batch(toList([modem_effect, fetch_blog()]))
+  ];
 }
 function main2() {
   let app = application(init2, update2, view2);
   let $ = start4(app, "#app", undefined);
   if (!($ instanceof Ok)) {
-    throw makeError("let_assert", FILEPATH, "website", 26, "main", "Pattern match failed, no pattern matched the value.", { value: $, start: 716, end: 765, pattern_start: 727, pattern_end: 732 });
+    throw makeError("let_assert", FILEPATH, "website", 20, "main", "Pattern match failed, no pattern matched the value.", { value: $, start: 489, end: 538, pattern_start: 500, pattern_end: 505 });
   }
   return;
 }

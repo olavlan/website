@@ -38,27 +38,30 @@ type Route {
   NotFound(uri: Uri)
 }
 
+const base_path = "/website"
+
 fn parse_route(uri: Uri) -> Route {
-  case uri.path_segments(uri.path) {
+  let segments = uri.path_segments(uri.path)
+  let path = case segments {
+    ["website", ..rest] -> rest
+    other -> other
+  }
+  case path {
     [] | [""] -> Index
-
     ["posts"] -> Posts
-
-    ["post", post_id] -> PostById(id: post_id)
-
+    ["posts", post_id] -> PostById(id: post_id)
     ["about"] -> About
-
     _ -> NotFound(uri:)
   }
 }
 
 fn href(route: Route) -> Attribute(message) {
   let url = case route {
-    Index -> "/"
-    About -> "/about"
-    Posts -> "/posts"
-    PostById(post_id) -> "/post/" <> post_id
-    NotFound(_) -> "/404"
+    Index -> base_path <> "/"
+    About -> base_path <> "/about"
+    Posts -> base_path <> "/posts"
+    PostById(post_id) -> base_path <> "/posts/" <> post_id
+    NotFound(_) -> base_path <> "/404"
   }
 
   attribute.href(url)

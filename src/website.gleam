@@ -2,7 +2,6 @@ import gleam/dict.{type Dict}
 import gleam/dynamic/decode
 import gleam/json
 import gleam/list
-import gleam/string
 import gleam/uri.{type Uri}
 import lustre
 import lustre/attribute.{type Attribute}
@@ -133,20 +132,18 @@ fn blog_post_decoder() -> decode.Decoder(BlogPost) {
 }
 
 fn view(model: Model) -> Element(Message) {
-  html.div([attribute.class("mx-auto max-w-2xl px-32")], [
-    html.nav([attribute.class("flex justify-between items-center my-16")], [
-      html.h1([attribute.class("text-purple-600 font-medium text-xl")], [
-        html.a([href(Index)], [html.text("My little Blog")]),
-      ]),
-      html.ul([attribute.class("flex space-x-8")], [
-        view_header_link(current: model.route, to: Posts, label: "Posts"),
-        view_header_link(current: model.route, to: About, label: "About"),
+  html.div([], [
+    html.nav([], [
+      html.h1([], [link(Index, "My little website")]),
+      html.ul([], [
+        view_menu_item(current: model.route, to: Posts, label: "Posts"),
+        view_menu_item(current: model.route, to: About, label: "About"),
       ]),
     ]),
-    html.main([attribute.class("my-16")], {
+    html.main([], {
       case model.route {
         Index -> view_index()
-        Posts -> view_posts(model)
+        Posts -> view_post_list(model)
         PostById(post_id) -> view_post(model, post_id)
         About -> view_about()
         NotFound(_) -> view_not_found()
@@ -155,7 +152,7 @@ fn view(model: Model) -> Element(Message) {
   ])
 }
 
-fn view_header_link(
+fn view_menu_item(
   to target: Route,
   current current: Route,
   label text: String,
@@ -164,61 +161,40 @@ fn view_header_link(
     PostById(_), Posts -> True
     _, _ -> current == target
   }
-
-  html.li(
-    [
-      attribute.classes([
-        #("border-transparent border-b-2 hover:border-purple-600", True),
-        #("text-purple-600", is_active),
-      ]),
-    ],
-    [html.a([href(target)], [html.text(text)])],
-  )
+  let inline = case is_active {
+    True -> html.text(text)
+    False -> link(target, text)
+  }
+  html.li([], [inline])
 }
 
 fn view_index() -> List(Element(message)) {
   [
-    title("Hello, Joe"),
-    leading(
-      "Or whoever you may be! This is were I will share random ramblings
-       and thoughts about life.",
+    title("olavlan"),
+    paragraph(
+      "Here I post about things that interest me, which is currently functional programming, typing and Gleam.",
     ),
-    html.p([attribute.class("mt-14")], [
-      html.text("There is not much going on at the moment, but you can still "),
-      link(Posts, "read my ramblings ->"),
-    ]),
-    paragraph("If you like <3"),
   ]
 }
 
-fn view_posts(model: Model) -> List(Element(Message)) {
+fn view_post_list(model: Model) -> List(Element(message)) {
   case model.posts {
     Ok(posts) -> {
       let entries =
-        posts
-        |> dict.to_list
-        |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
-        |> list.map(fn(entry) {
-          let #(id, post) = entry
-          html.article([attribute.class("mt-14")], [
-            html.h3([attribute.class("text-xl text-purple-600 font-light")], [
-              html.a([attribute.class("hover:underline"), href(PostById(id))], [
-                html.text(post.title),
-              ]),
-            ]),
-            html.p([attribute.class("mt-1")], [
-              html.text(post.date_created),
-            ]),
-          ])
-        })
-
+        dict.to_list(posts)
+        |> list.map(view_post_summary)
       [title("Posts"), ..entries]
     }
-    Error(Nil) -> [title("Posts"), leading("Loading...")]
+    Error(Nil) -> [title("Posts"), paragraph("Loading...")]
   }
 }
 
-fn view_post(model: Model, post_id: String) -> List(Element(Message)) {
+fn view_post_summary(entry: #(String, BlogPost)) -> Element(message) {
+  let #(id, post) = entry
+  summary(post.title, PostById(id), post.date_created)
+}
+
+fn view_post(model: Model, post_id: String) -> List(Element(message)) {
   case model.posts {
     Ok(posts) ->
       case dict.get(posts, post_id) {
@@ -227,7 +203,7 @@ fn view_post(model: Model, post_id: String) -> List(Element(Message)) {
           html.article([], [
             pandi_lustre.to_lustre(post.document),
           ]),
-          html.p([attribute.class("mt-14")], [link(Posts, "<- Go back?")]),
+          html.p([], [link(Posts, "<- Go back")]),
         ]
       }
     Error(Nil) -> [title("Loading...")]
@@ -238,12 +214,7 @@ fn view_about() -> List(Element(message)) {
   [
     title("Me"),
     paragraph(
-      "I document the odd occurrences that catch my attention and rewrite my own
-       narrative along the way. I'm fine being referred to with pronouns.",
-    ),
-    paragraph(
-      "If you enjoy these glimpses into my mind, feel free to come back
-       semi-regularly. But not too regularly, you creep.",
+      "I'm a homely person in my thirties living in the outskirts of Oslo with my partner and cat.",
     ),
   ]
 }
@@ -251,33 +222,27 @@ fn view_about() -> List(Element(message)) {
 fn view_not_found() -> List(Element(message)) {
   [
     title("Not found"),
-    paragraph(
-      "You glimpse into the void and see -- nothing?
-       Well that was somewhat expected.",
-    ),
+    paragraph("Nothing was found here."),
   ]
 }
 
 fn title(title: String) -> Element(message) {
-  html.h2([attribute.class("text-3xl text-purple-800 font-light")], [
+  html.h2([], [
     html.text(title),
   ])
 }
 
-fn leading(text: String) -> Element(message) {
-  html.p([attribute.class("mt-8 text-lg")], [html.text(text)])
+fn summary(title: String, route: Route, text: String) -> Element(message) {
+  html.article([], [
+    html.h3([], [link(route, title)]),
+    paragraph(text),
+  ])
 }
 
 fn paragraph(text: String) -> Element(message) {
-  html.p([attribute.class("mt-14")], [html.text(text)])
+  html.p([], [html.text(text)])
 }
 
 fn link(target: Route, title: String) -> Element(message) {
-  html.a(
-    [
-      href(target),
-      attribute.class("text-purple-600 hover:underline cursor-pointer"),
-    ],
-    [html.text(title)],
-  )
+  html.a([href(target)], [html.text(title)])
 }

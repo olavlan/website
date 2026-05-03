@@ -66,7 +66,11 @@ fn view_post_list(model: Model) -> List(Element(message)) {
 
 fn view_post_summary(entry: #(String, BlogPost)) -> Element(message) {
   let #(id, post) = entry
-  summary(post.title, route.PostById(id), post.date_created)
+  summary(
+    title: post.title,
+    route_to_content: route.PostById(id),
+    details: post.date_created,
+  )
 }
 
 fn view_post(model: Model, post_id: String) -> List(Element(message)) {
@@ -108,9 +112,9 @@ fn title(title: String) -> Element(message) {
 }
 
 fn summary(
-  title: String,
-  route: route.Route,
-  text: String,
+  title title: String,
+  route_to_content route: route.Route,
+  details text: String,
 ) -> Element(message) {
   html.article([], [
     html.h3([], [link(route, title)]),

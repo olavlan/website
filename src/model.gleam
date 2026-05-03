@@ -28,11 +28,7 @@ pub fn init(_) -> #(Model, Effect(Message)) {
   }
 
   let modem_effect =
-    modem.init(fn(uri) {
-      uri
-      |> route.parse_route
-      |> UserNavigatedTo
-    })
+    modem.init(fn(uri) { route.parse_route(uri) |> UserNavigatedTo })
 
   #(
     Model(posts: Error(Nil), route:),
@@ -49,13 +45,11 @@ pub fn update(model: Model, message: Message) -> #(Model, Effect(Message)) {
         body
         |> json.parse(blog_decoder())
       case decoded {
-        Ok(posts_dict) -> #(
-          Model(..model, posts: Ok(posts_dict)),
-          effect.none(),
-        )
+        Ok(posts) -> #(Model(..model, posts: Ok(posts)), effect.none())
         Error(_) -> #(Model(..model, posts: Error(Nil)), effect.none())
       }
     }
+
     BlogFetched(Error(_)) -> #(Model(..model, posts: Error(Nil)), effect.none())
   }
 }

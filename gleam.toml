@@ -23,7 +23,7 @@ gleam_json = ">= 3.0.0 and < 4.0.0"
 modem = ">= 2.1.2 and < 3.0.0"
 rsvp = ">= 1.0.0 and < 2.0.0"
 pandi = { path = "../pandi" }
-lustre_ui = { path = "../ui" }
+
 
 [tools.lustre.html]
 title = "olavlan"

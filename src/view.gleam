@@ -11,7 +11,7 @@ import route
 pub fn view(model: Model) -> Element(Message) {
   component.container([
     component.nav([
-      component.site_title(component.link(route.Index, "My little website")),
+      component.site_title(route.Index, "My little website"),
       component.nav_links([
         component.nav_link(
           to: route.Posts,
